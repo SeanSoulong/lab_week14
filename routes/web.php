@@ -5,7 +5,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\classroom;
 use App\Models\User;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use App\Http\Middleware\EnsurTokenIsValid;
 
+
+Route::middleware([EnsurTokenIsValid::class])->group(function () {
+    
 Route::get('/', function () {
     return view('welcome');
 });
@@ -80,25 +86,42 @@ Route::post('/register', function (Request $request) {
         'message' => 'User registered successfully',
         'data' => $user
     ]);
-});
+})->withoutMiddleware(EnsurTokenIsValid::class);
 
 Route::post('/login', function (Request $request) {
     $credentials = $request->only('email', 'password');
 
     if (Auth::attempt($credentials)) {
         $user = Auth::user();
+            
+        $payload = [
+            'sub' => $user -> id,
+            'email' => $user->email,
+            'iat' => time(),
+            'exp' => time() + 3600,
+        ];
+
+
+        $jwt = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
+
         return response()->json([
-            'message' => 'Login successful',
-            'data' => $user
+            'message' => 'JWT token generated successfully',
+            'token' => $jwt
         ]);
     } else {
         return response()->json([
             'message' => 'Invalid credentials'
         ], 401);
     }
+
+})->withoutMiddleware(EnsurTokenIsValid::class);
+
+// Sing JWT token for authentication
+
+
+
+
+
+
+
 });
-
-
-
-
-
