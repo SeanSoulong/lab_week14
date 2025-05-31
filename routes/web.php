@@ -1,127 +1,27 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\classroom;
-use App\Models\User;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\AuthController;
 use App\Http\Middleware\EnsurTokenIsValid;
 
-
 Route::middleware([EnsurTokenIsValid::class])->group(function () {
-    
-Route::get('/', function () {
-    return view('welcome');
+
+    Route::get('/', fn() => view('welcome'));
+
+    // Student Routes
+    Route::get('/students', [ClassroomController::class, 'getStudents']);
+    Route::post('/students', [ClassroomController::class, 'createStudent']);
+    Route::delete('/students/{id}', [ClassroomController::class, 'deleteStudent']);
+    Route::patch('/students/{id}', [ClassroomController::class, 'updateStudent']);
+
+    // Teacher Routes
+    Route::get('/teachers', [ClassroomController::class, 'getTeachers']);
+    Route::post('/teachers', [ClassroomController::class, 'createTeacher']);
+    Route::delete('/teachers/{id}', [ClassroomController::class, 'deleteTeacher']);
+    Route::patch('/teachers/{id}', [ClassroomController::class, 'updateTeacher']);
 });
 
-//1. get all students from the backend
-Route::get('/students', function () {
-    return response()->json(classroom::getStudents());
-});
-
-//2. post new student(create new student)
-Route::post('/students', function () {
-    $body = request()->json()->all();
-    $student = classroom::createStudent($body['name'], $body['age']);
-    return response()->json(['message' => 'Student created successfully', 'data' => $student], 201);
-});
-
-//3.delete existing student by id
-Route::delete('/students/{id}', function ($id) {
-    return classroom::deleteStudentById($id)
-        ? response()->json(['message' => 'Student deleted'])
-        : response()->json(['error' => 'Student not found'], 404);
-});
-
-//4.patch existing student by id
-Route::patch('/students/{id}', function ($id) {
-    $body = request()->json()->all();
-    $student = classroom::updateStudent($id, $body['name'], $body['age'], email: $body['email']);
-    return $student
-        ? response()->json(['message' => 'Student updated', 'data' => $student])
-        : response()->json(['error' => 'Student not found'], 404);
-});
-
-//5. get all teachers from the backend
-Route::get('/teachers', function () {
-    return response()->json(classroom::getTeachers());
-});
-
-//6. post new teacher(create new teacher)
-Route::post('/teachers', function () {
-    $body = request()->json()->all();
-    $teacher = classroom::createTeacher($body['name'], $body['subject']);
-    return response()->json(['message' => 'Teacher created successfully', 'data' => $teacher], 201);
-});
-
-//7. delete existing teacher by id
-Route::delete('/teachers/{id}', function ($id) {
-    return classroom::deleteTeacherById($id)
-        ? response()->json(['message' => 'Teacher deleted'])
-        : response()->json(['error' => 'Teacher not found'], 404);
-});
-
-
-//8.patch existing teacher by id
-Route::patch('/teachers/{id}', function ($id) {
-    $body = request()->json()->all();
-    $teacher = classroom::updateTeacher($id, $body['name'], $body['subject']);
-    return $teacher
-        ? response()->json(['message' => 'Teacher updated', 'data' => $teacher])
-        : response()->json(['error' => 'Teacher not found'], 404);
-});
-Route::post('/register', function (Request $request) {
-    $body = $request->all();
-
-    $user = new User();
-    $user->name = $body['name'];
-    $user->email = $body['email'];
-    $user->password = bcrypt($body['password']);
-
-    $user->save();
-
-    return response()->json([
-        'message' => 'User registered successfully',
-        'data' => $user
-    ]);
-})->withoutMiddleware(EnsurTokenIsValid::class);
-
-Route::post('/login', function (Request $request) {
-    $credentials = $request->only('email', 'password');
-
-    if (Auth::attempt($credentials)) {
-        $user = Auth::user();
-            
-        $payload = [
-            'sub' => $user -> id,
-            'email' => $user->email,
-            'iat' => time(),
-            'exp' => time() + 3600,
-        ];
-
-
-        $jwt = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
-
-        return response()->json([
-            'message' => 'JWT token generated successfully',
-            'token' => $jwt
-        ]);
-    } else {
-        return response()->json([
-            'message' => 'Invalid credentials'
-        ], 401);
-    }
-
-})->withoutMiddleware(EnsurTokenIsValid::class);
-
-// Sing JWT token for authentication
-
-
-
-
-
-
-
-});
+// Auth Routes (excluded from token middleware)
+Route::post('/register', [AuthController::class, 'register'])->withoutMiddleware(EnsurTokenIsValid::class);
+Route::post('/login', [AuthController::class, 'login'])->withoutMiddleware(EnsurTokenIsValid::class);
